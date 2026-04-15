@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Travel Toolkit</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Libre+Franklin:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F1EBE3;
+      --card: #FAF7F3;
+      --ink: #1C1917;
+      --muted: #8C8578;
+      --rule: #D6CFC5;
+      --accent: #BF522A;
+      --accent-light: #F3E0D6;
+      --input-bg: #F5F1EC;
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-body: 'Libre Franklin', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      font-family: var(--font-body);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 28px 16px 64px; gap: 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- Location banner ---- */
+    .loc-banner {
+      width: 100%; max-width: 520px;
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0; border-bottom: 1.5px solid var(--ink);
+    }
+    .loc-flag { font-size: 28px; line-height: 1 }
+    .loc-info { flex: 1 }
+    .loc-name { font-family: var(--font-display); font-size: 22px; letter-spacing: -0.3px }
+    .loc-detail { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px }
+    .loc-change {
+      font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--accent); background: none;
+      border: 1px solid var(--accent); border-radius: 0; padding: 5px 10px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .loc-change:hover { background: var(--accent); color: #fff }
+
+    /* ---- Override modal ---- */
+    .override-overlay {
+      position: fixed; inset: 0; background: rgba(28,25,23,0.4);
+      display: none; align-items: center; justify-content: center;
+      z-index: 100; padding: 20px;
+    }
+    .override-overlay.open { display: flex }
+    .override-panel {
+      width: 100%; max-width: 360px; background: var(--card);
+      border-radius: 0; border: 1px solid var(--rule); padding: 24px;
+    }
+    .override-panel h3 { font-family: var(--font-display); font-size: 20px; margin-bottom: 16px }
+    .override-panel label {
+      font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+      letter-spacing: 1px; color: var(--muted); display: block;
+      margin-bottom: 6px; margin-top: 12px;
+    }
+    .override-panel select {
+      width: 100%; background: var(--input-bg); border: 1px solid var(--rule);
+      border-radius: 0; color: var(--ink); font-family: var(--font-body);
+      font-size: 14px; padding: 10px 12px; outline: none; cursor: pointer;
+    }
+    .override-btns { display: flex; gap: 10px; margin-top: 20px }
+    .override-btns button {
+      flex: 1; border: none; border-radius: 0; padding: 10px;
+      font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-body);
+    }
+    .btn-cancel { background: var(--input-bg); color: var(--muted); border: 1px solid var(--rule) }
+    .btn-apply { background: var(--ink); color: var(--card) }
+
+    /* ---- Cards ---- */
+    .card {
+      width: 100%; max-width: 520px; background: var(--card);
+      border: 1px solid var(--rule); border-radius: 0;
+      padding: 28px; overflow: hidden;
+    }
+    .card-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--rule);
+    }
+    .card-title { font-family: var(--font-display); font-size: 26px }
+    .card-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px }
+    .btn-sm {
+      font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--muted); background: none;
+      border: 1px solid var(--rule); border-radius: 0; padding: 5px 10px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-sm:hover { border-color: var(--ink); color: var(--ink) }
+    .error-msg {
+      font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+      padding: 8px 12px; background: var(--accent-light); border-radius: 0; margin-bottom: 12px;
+    }
+    .sync-line {
+      font-family: var(--font-mono); font-size: 9px; color: var(--muted);
+      text-align: right; margin-top: 10px; letter-spacing: 0.5px;
+    }
+
+    /* ---- Shared grid layout ---- */
+    .tool-grid { display: flex; gap: 16px; align-items: end }
+    .tool-col { flex: 1; min-width: 0 }
+    .tool-label {
+      font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tool-label .flag { font-size: 16px }
+    .tool-input {
+      width: 100%; background: var(--input-bg); border: 1px solid var(--rule);
+      border-radius: 0; padding: 14px 16px; font-family: var(--font-mono);
+      font-size: 22px; font-weight: 600; color: var(--ink); outline: none;
+      transition: border-color 0.15s; letter-spacing: -0.5px;
+    }
+    .tool-input:focus { border-color: var(--accent) }
+    .tool-input::placeholder { color: var(--rule) }
+    .tool-arrow {
+      font-family: var(--font-mono); color: var(--rule); font-size: 18px;
+      padding-bottom: 14px; display: flex; align-items: center; justify-content: center;
+    }
+    .formula-line {
+      text-align: center; color: var(--muted); font-size: 9px;
+      font-family: var(--font-mono); margin-top: 12px; letter-spacing: 0.5px;
+      font-style: italic;
+    }
+
+    /* ---- Currency swap button ---- */
+    .btn-swap {
+      width: 32px; height: 32px; border-radius: 0;
+      background: var(--card); border: 1px solid var(--rule);
+      color: var(--accent); font-size: 15px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .btn-swap:hover { background: var(--accent); color: var(--card); border-color: var(--accent) }
+
+    /* ---- Metric tabs ---- */
+    .metric-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px }
+    .metric-tab {
+      font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--muted); background: none;
+      border: 1px solid var(--rule); border-radius: 0; padding: 6px 11px;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .metric-tab:hover { color: var(--ink); border-color: var(--ink) }
+    .metric-tab.active { background: var(--ink); color: var(--card); border-color: var(--ink) }
+
+    /* ---- Translate ---- */
+    .translate-grid { display: flex; gap: 14px; width: 100% }
+    .translate-col { flex: 1; display: flex; flex-direction: column; min-width: 0 }
+    textarea {
+      flex: 1; min-height: 110px; max-width: 100%; width: 100%;
+      background: var(--input-bg); border: 1px solid var(--rule); border-radius: 0;
+      padding: 12px 14px; color: var(--ink); font-family: var(--font-body);
+      font-size: 14px; line-height: 1.6; resize: vertical; outline: none;
+      transition: border-color 0.15s;
+    }
+    textarea:focus { border-color: var(--accent) }
+    textarea::placeholder { color: #C4BCB2 }
+    textarea.output { background: none; color: var(--muted) }
+    .translate-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px }
+    .btn-action {
+      font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 1px; font-weight: 600; background: var(--ink);
+      color: var(--card); border: none; border-radius: 0; padding: 9px 20px;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-action:hover { opacity: 0.8 }
+    .btn-action:disabled { opacity: 0.3; cursor: default }
+    .char-count { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.5px }
+
+    /* ---- Lens ---- */
+    .lens-capture {
+      position: relative; width: 100%;
+      background: var(--input-bg); border: 1px solid var(--rule);
+      min-height: 180px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .lens-capture:hover { border-color: var(--accent) }
+    .lens-capture input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .lens-icon {
+      width: 48px; height: 48px; border: 2px solid var(--rule);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+    }
+    .lens-hint { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px }
+    .lens-canvas-wrap {
+      width: 100%; position: relative;
+    }
+    .lens-canvas-wrap canvas {
+      width: 100%; display: block; border: 1px solid var(--rule);
+    }
+    .lens-status {
+      font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-top: 12px; text-align: center;
+    }
+    .lens-toggle-wrap {
+      margin-top: 12px; text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .translate-grid { flex-direction: column }
+      .tool-input { font-size: 18px }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOCATION -->
+<div class="loc-banner">
+  <div class="loc-flag" id="loc-flag">🌍</div>
+  <div class="loc-info">
+    <div class="loc-name" id="loc-name">Detecting...</div>
+    <div class="loc-detail" id="loc-detail">auto-configuring</div>
+  </div>
+  <button class="loc-change" onclick="openOverride()">Change</button>
+</div>
+
+<!-- OVERRIDE -->
+<div class="override-overlay" id="override-overlay">
+  <div class="override-panel">
+    <h3>Set Location</h3>
+    <label>Country</label>
+    <select id="override-country"></select>
+    <div class="override-btns">
+      <button class="btn-cancel" onclick="closeOverride()">Cancel</button>
+      <button class="btn-apply" onclick="applyOverride()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- LENS -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Lens</div>
+      <div class="card-sub" id="lens-sub">Photo → Translate</div>
+    </div>
+    <button class="btn-sm" onclick="resetLens()" id="lens-retake-btn" style="display:none">New Photo</button>
+  </div>
+
+  <div class="lens-capture" id="lens-capture">
+    <div class="lens-icon">📷</div>
+    <div class="lens-hint">Tap to photograph a menu</div>
+    <input type="file" accept="image/*" capture="environment" id="lens-input" onchange="handleLensCapture(this)">
+  </div>
+
+  <div class="lens-canvas-wrap" id="lens-canvas-wrap" style="display:none">
+    <canvas id="lens-canvas"></canvas>
+  </div>
+
+  <div class="lens-status" id="lens-status"></div>
+
+  <div class="lens-toggle-wrap" id="lens-toggle-wrap" style="display:none">
+    <button class="btn-sm" id="lens-toggle" onclick="toggleOverlay()">Show Original</button>
+  </div>
+</div>
+
+<!-- CURRENCY -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Currency</div>
+      <div class="card-sub" id="rate-display">fetching rate...</div>
+    </div>
+    <button class="btn-sm" onclick="fetchRate()">Refresh</button>
+  </div>
+  <div id="error-box" class="error-msg" style="display:none"></div>
+  <div class="tool-grid">
+    <div class="tool-col">
+      <div class="tool-label"><span class="flag">🇺🇸</span> USD</div>
+      <input type="number" inputmode="decimal" class="tool-input" id="cur-usd" placeholder="0.00" value="1" oninput="curFromUsd()">
+    </div>
+    <div class="tool-arrow"><button class="btn-swap" onclick="swapCurrency()">⇄</button></div>
+    <div class="tool-col">
+      <div class="tool-label"><span class="flag" id="cur-local-flag">🌍</span> <span id="cur-local-code">---</span></div>
+      <input type="number" inputmode="decimal" class="tool-input" id="cur-local" placeholder="0.00" oninput="curFromLocal()">
+    </div>
+  </div>
+  <div class="sync-line" id="sync-time"></div>
+</div>
+
+<!-- METRIC -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Metric</div>
+      <div class="card-sub" id="metric-sub">km/h → mph</div>
+    </div>
+  </div>
+  <div class="metric-tabs">
+    <button class="metric-tab active" data-mode="speed" onclick="setMetric('speed')">km/h · mph</button>
+    <button class="metric-tab" data-mode="temp" onclick="setMetric('temp')">°C · °F</button>
+    <button class="metric-tab" data-mode="km-mi" onclick="setMetric('km-mi')">km · mi</button>
+    <button class="metric-tab" data-mode="kg-lb" onclick="setMetric('kg-lb')">kg · lb</button>
+    <button class="metric-tab" data-mode="cm-in" onclick="setMetric('cm-in')">cm · in</button>
+    <button class="metric-tab" data-mode="l-gal" onclick="setMetric('l-gal')">L · gal</button>
+  </div>
+  <div class="tool-grid">
+    <div class="tool-col">
+      <div class="tool-label" id="m-left-label">KM/H</div>
+      <input type="number" inputmode="decimal" class="tool-input" id="m-left" placeholder="0" oninput="metricLeft()">
+    </div>
+    <div class="tool-arrow">→</div>
+    <div class="tool-col">
+      <div class="tool-label" id="m-right-label">MPH</div>
+      <input type="number" inputmode="decimal" class="tool-input" id="m-right" placeholder="0" oninput="metricRight()">
+    </div>
+  </div>
+  <div class="formula-line" id="formula-hint">× 0.621371</div>
+</div>
+
+<!-- TRANSLATE -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Translate</div>
+      <div class="card-sub" id="translate-sub">English → Spanish</div>
+    </div>
+  </div>
+  <div class="translate-grid">
+    <div class="translate-col">
+      <div class="tool-label"><span class="flag">🇺🇸</span> EN</div>
+      <textarea id="source-text" placeholder="Type English text..." oninput="updateCharCount()"></textarea>
+    </div>
+    <div class="translate-col">
+      <div class="tool-label"><span class="flag" id="trans-flag">🌍</span> <span id="trans-code">ES</span></div>
+      <textarea id="translated-text" class="output" placeholder="Translation appears here..." readonly></textarea>
+    </div>
+  </div>
+  <div class="translate-footer">
+    <span class="char-count" id="char-count">0 chars</span>
+    <button class="btn-action" id="btn-translate" onclick="translateText()">Translate</button>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+// When deployed on Vercel with GOOGLE_API_KEY, uses Google APIs.
+// Locally / without key, falls back to MyMemory (lower quality).
+const API_BASE = window.location.origin;
+
+async function googleTranslate(text, target, source) {
+  try {
+    const r = await fetch(API_BASE + "/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, target, source }),
+    });
+    if (!r.ok) throw new Error("API error");
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    return d.translated;
+  } catch {
+    return null; // fall through to fallback
+  }
+}
+
+async function fallbackTranslate(text, target) {
+  const url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text) + "&langpair=en|" + target;
+  const r = await fetch(url);
+  const d = await r.json();
+  return d?.responseData?.translatedText || null;
+}
+
+async function doTranslate(text, target, source) {
+  return (await googleTranslate(text, target, source)) || (await fallbackTranslate(text, target));
+}
+
+async function doOcr(base64) {
+  const r = await fetch(API_BASE + "/api/ocr", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: base64 }),
+  });
+  if (!r.ok) throw new Error("OCR API error");
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return { text: d.text || "", lines: d.lines || [] };
+}
+
+// ===== COUNTRY DATABASE =====
+const COUNTRIES={
+  US:{name:"United States",flag:"🇺🇸",currency:"USD",lang:"en",langName:"English"},
+  MX:{name:"Mexico",flag:"🇲🇽",currency:"MXN",lang:"es",langName:"Spanish"},
+  CA:{name:"Canada",flag:"🇨🇦",currency:"CAD",lang:"en",langName:"English"},
+  GB:{name:"United Kingdom",flag:"🇬🇧",currency:"GBP",lang:"en",langName:"English"},
+  FR:{name:"France",flag:"🇫🇷",currency:"EUR",lang:"fr",langName:"French"},
+  DE:{name:"Germany",flag:"🇩🇪",currency:"EUR",lang:"de",langName:"German"},
+  ES:{name:"Spain",flag:"🇪🇸",currency:"EUR",lang:"es",langName:"Spanish"},
+  IT:{name:"Italy",flag:"🇮🇹",currency:"EUR",lang:"it",langName:"Italian"},
+  PT:{name:"Portugal",flag:"🇵🇹",currency:"EUR",lang:"pt",langName:"Portuguese"},
+  NL:{name:"Netherlands",flag:"🇳🇱",currency:"EUR",lang:"nl",langName:"Dutch"},
+  BE:{name:"Belgium",flag:"🇧🇪",currency:"EUR",lang:"fr",langName:"French"},
+  AT:{name:"Austria",flag:"🇦🇹",currency:"EUR",lang:"de",langName:"German"},
+  CH:{name:"Switzerland",flag:"🇨🇭",currency:"CHF",lang:"de",langName:"German"},
+  IE:{name:"Ireland",flag:"🇮🇪",currency:"EUR",lang:"en",langName:"English"},
+  GR:{name:"Greece",flag:"🇬🇷",currency:"EUR",lang:"el",langName:"Greek"},
+  JP:{name:"Japan",flag:"🇯🇵",currency:"JPY",lang:"ja",langName:"Japanese"},
+  KR:{name:"South Korea",flag:"🇰🇷",currency:"KRW",lang:"ko",langName:"Korean"},
+  CN:{name:"China",flag:"🇨🇳",currency:"CNY",lang:"zh",langName:"Chinese"},
+  TW:{name:"Taiwan",flag:"🇹🇼",currency:"TWD",lang:"zh",langName:"Chinese"},
+  TH:{name:"Thailand",flag:"🇹🇭",currency:"THB",lang:"th",langName:"Thai"},
+  VN:{name:"Vietnam",flag:"🇻🇳",currency:"VND",lang:"vi",langName:"Vietnamese"},
+  PH:{name:"Philippines",flag:"🇵🇭",currency:"PHP",lang:"tl",langName:"Tagalog"},
+  ID:{name:"Indonesia",flag:"🇮🇩",currency:"IDR",lang:"id",langName:"Indonesian"},
+  MY:{name:"Malaysia",flag:"🇲🇾",currency:"MYR",lang:"ms",langName:"Malay"},
+  SG:{name:"Singapore",flag:"🇸🇬",currency:"SGD",lang:"en",langName:"English"},
+  IN:{name:"India",flag:"🇮🇳",currency:"INR",lang:"hi",langName:"Hindi"},
+  AU:{name:"Australia",flag:"🇦🇺",currency:"AUD",lang:"en",langName:"English"},
+  NZ:{name:"New Zealand",flag:"🇳🇿",currency:"NZD",lang:"en",langName:"English"},
+  BR:{name:"Brazil",flag:"🇧🇷",currency:"BRL",lang:"pt",langName:"Portuguese"},
+  AR:{name:"Argentina",flag:"🇦🇷",currency:"ARS",lang:"es",langName:"Spanish"},
+  CO:{name:"Colombia",flag:"🇨🇴",currency:"COP",lang:"es",langName:"Spanish"},
+  CL:{name:"Chile",flag:"🇨🇱",currency:"CLP",lang:"es",langName:"Spanish"},
+  PE:{name:"Peru",flag:"🇵🇪",currency:"PEN",lang:"es",langName:"Spanish"},
+  CR:{name:"Costa Rica",flag:"🇨🇷",currency:"CRC",lang:"es",langName:"Spanish"},
+  DO:{name:"Dominican Republic",flag:"🇩🇴",currency:"DOP",lang:"es",langName:"Spanish"},
+  CU:{name:"Cuba",flag:"🇨🇺",currency:"CUP",lang:"es",langName:"Spanish"},
+  JM:{name:"Jamaica",flag:"🇯🇲",currency:"JMD",lang:"en",langName:"English"},
+  ZA:{name:"South Africa",flag:"🇿🇦",currency:"ZAR",lang:"en",langName:"English"},
+  AE:{name:"UAE",flag:"🇦🇪",currency:"AED",lang:"ar",langName:"Arabic"},
+  SA:{name:"Saudi Arabia",flag:"🇸🇦",currency:"SAR",lang:"ar",langName:"Arabic"},
+  EG:{name:"Egypt",flag:"🇪🇬",currency:"EGP",lang:"ar",langName:"Arabic"},
+  TR:{name:"Turkey",flag:"🇹🇷",currency:"TRY",lang:"tr",langName:"Turkish"},
+  IL:{name:"Israel",flag:"🇮🇱",currency:"ILS",lang:"he",langName:"Hebrew"},
+  SE:{name:"Sweden",flag:"🇸🇪",currency:"SEK",lang:"sv",langName:"Swedish"},
+  NO:{name:"Norway",flag:"🇳🇴",currency:"NOK",lang:"no",langName:"Norwegian"},
+  DK:{name:"Denmark",flag:"🇩🇰",currency:"DKK",lang:"da",langName:"Danish"},
+  FI:{name:"Finland",flag:"🇫🇮",currency:"EUR",lang:"fi",langName:"Finnish"},
+  PL:{name:"Poland",flag:"🇵🇱",currency:"PLN",lang:"pl",langName:"Polish"},
+  CZ:{name:"Czech Republic",flag:"🇨🇿",currency:"CZK",lang:"cs",langName:"Czech"},
+  HU:{name:"Hungary",flag:"🇭🇺",currency:"HUF",lang:"hu",langName:"Hungarian"},
+  RO:{name:"Romania",flag:"🇷🇴",currency:"RON",lang:"ro",langName:"Romanian"},
+  RU:{name:"Russia",flag:"🇷🇺",currency:"RUB",lang:"ru",langName:"Russian"},
+  UA:{name:"Ukraine",flag:"🇺🇦",currency:"UAH",lang:"uk",langName:"Ukrainian"},
+  IS:{name:"Iceland",flag:"🇮🇸",currency:"ISK",lang:"is",langName:"Icelandic"},
+  HR:{name:"Croatia",flag:"🇭🇷",currency:"EUR",lang:"hr",langName:"Croatian"},
+  BZ:{name:"Belize",flag:"🇧🇿",currency:"BZD",lang:"en",langName:"English"},
+  GT:{name:"Guatemala",flag:"🇬🇹",currency:"GTQ",lang:"es",langName:"Spanish"},
+  HN:{name:"Honduras",flag:"🇭🇳",currency:"HNL",lang:"es",langName:"Spanish"},
+  PA:{name:"Panama",flag:"🇵🇦",currency:"PAB",lang:"es",langName:"Spanish"},
+  EC:{name:"Ecuador",flag:"🇪🇨",currency:"USD",lang:"es",langName:"Spanish"},
+  MA:{name:"Morocco",flag:"🇲🇦",currency:"MAD",lang:"ar",langName:"Arabic"},
+  KE:{name:"Kenya",flag:"🇰🇪",currency:"KES",lang:"sw",langName:"Swahili"},
+  NG:{name:"Nigeria",flag:"🇳🇬",currency:"NGN",lang:"en",langName:"English"},
+};
+
+// ===== STATE =====
+let currentCountry = null, rate = null, curSwapped = false;
+
+// Populate dropdown
+(function(){
+  const sel = document.getElementById("override-country");
+  Object.entries(COUNTRIES).sort((a,b) => a[1].name.localeCompare(b[1].name)).forEach(([code, c]) => {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = c.flag + " " + c.name + " — " + c.currency + " / " + c.langName;
+    sel.appendChild(opt);
+  });
+})();
+
+function openOverride() { document.getElementById("override-overlay").classList.add("open") }
+function closeOverride() { document.getElementById("override-overlay").classList.remove("open") }
+function applyOverride() { closeOverride(); applyCountry(document.getElementById("override-country").value) }
+
+// ===== GEO =====
+async function detectLocation() {
+  const apis = [
+    async () => { const r = await fetch("https://ipapi.co/json/"); const d = await r.json(); return d?.country_code },
+    async () => { const r = await fetch("https://ipwho.is/"); const d = await r.json(); return d?.country_code },
+  ];
+  for (const api of apis) { try { const c = await api(); if (c && COUNTRIES[c]) return c } catch {} }
+  return null;
+}
+
+function getTargetLang() {
+  const c = COUNTRIES[currentCountry];
+  return (c && c.lang !== "en") ? c.lang : "es";
+}
+
+function applyCountry(code) {
+  const c = COUNTRIES[code]; if (!c) return;
+  currentCountry = code;
+  document.getElementById("loc-flag").textContent = c.flag;
+  document.getElementById("loc-name").textContent = c.name;
+  document.getElementById("loc-detail").textContent = c.currency + " · " + c.langName;
+  document.getElementById("cur-local-flag").textContent = c.flag;
+  document.getElementById("cur-local-code").textContent = c.currency;
+  curSwapped = false; fetchRate();
+
+  const isEn = c.lang === "en";
+  const langLabel = isEn ? "Spanish" : c.langName;
+  const langFlag = isEn ? "🇲🇽" : c.flag;
+  const langCode = isEn ? "ES" : c.lang.toUpperCase();
+
+  document.getElementById("translate-sub").textContent = "English → " + langLabel;
+  document.getElementById("trans-flag").textContent = langFlag;
+  document.getElementById("trans-code").textContent = langCode;
+  document.getElementById("lens-sub").textContent = "Photo → " + langLabel + " → English";
+  document.getElementById("lens-trans-flag").textContent = "🇺🇸";
+  document.getElementById("lens-trans-lang").textContent = "English";
+
+  document.getElementById("source-text").value = "";
+  document.getElementById("translated-text").value = "";
+  document.getElementById("override-country").value = code;
+  resetLens();
+}
+
+// ===== CURRENCY =====
+async function fetchRate() {
+  const c = COUNTRIES[currentCountry]; if (!c) return;
+  const cur = c.currency;
+  document.getElementById("rate-display").textContent = "fetching...";
+  document.getElementById("error-box").style.display = "none";
+  if (cur === "USD") { rate = 1; document.getElementById("rate-display").textContent = "1 USD = 1 USD"; curFromUsd(); return }
+  const attempts = [
+    async () => { const r = await fetch("https://open.er-api.com/v6/latest/USD"); const d = await r.json(); return d?.rates?.[cur] },
+    async () => { const r = await fetch("https://latest.currency-api.pages.dev/v1/currencies/usd.json"); const d = await r.json(); return d?.usd?.[cur.toLowerCase()] },
+  ];
+  let fetched = null;
+  for (const a of attempts) { try { const v = await a(); if (v) { fetched = v; break } } catch {} }
+  if (fetched) {
+    rate = fetched;
+    document.getElementById("rate-display").textContent = "1 USD = " + rate.toFixed(4) + " " + cur;
+    document.getElementById("sync-time").textContent = "synced " + new Date().toLocaleTimeString();
+    curFromUsd();
+  } else {
+    document.getElementById("rate-display").textContent = "unavailable";
+    document.getElementById("error-box").textContent = "Couldn't fetch " + cur + " rate.";
+    document.getElementById("error-box").style.display = "block";
+  }
+}
+function curFromUsd() {
+  if (!rate) return;
+  const v = parseFloat(document.getElementById(curSwapped ? "cur-local" : "cur-usd").value);
+  document.getElementById(curSwapped ? "cur-usd" : "cur-local").value = isNaN(v) ? "" : (curSwapped ? (v / rate).toFixed(2) : (v * rate).toFixed(2));
+}
+function curFromLocal() {
+  if (!rate) return;
+  const v = parseFloat(document.getElementById(curSwapped ? "cur-usd" : "cur-local").value);
+  document.getElementById(curSwapped ? "cur-local" : "cur-usd").value = isNaN(v) ? "" : (curSwapped ? (v * rate).toFixed(2) : (v / rate).toFixed(2));
+}
+function swapCurrency() {
+  const uv = document.getElementById("cur-usd").value, lv = document.getElementById("cur-local").value;
+  document.getElementById("cur-usd").value = lv; document.getElementById("cur-local").value = uv;
+  curSwapped = !curSwapped;
+}
+
+// ===== METRIC =====
+const modes = {
+  speed: { left: "KM/H", right: "MPH", toR: v => v * 0.621371, toL: v => v / 0.621371, hint: "× 0.621371", sub: "km/h → mph" },
+  temp: { left: "°C", right: "°F", toR: v => v * 9 / 5 + 32, toL: v => (v - 32) * 5 / 9, hint: "(°C × 9/5) + 32", sub: "°C → °F" },
+  "km-mi": { left: "KM", right: "MI", toR: v => v * 0.621371, toL: v => v / 0.621371, hint: "× 0.621371", sub: "km → mi" },
+  "kg-lb": { left: "KG", right: "LB", toR: v => v * 2.20462, toL: v => v / 2.20462, hint: "× 2.20462", sub: "kg → lb" },
+  "cm-in": { left: "CM", right: "IN", toR: v => v / 2.54, toL: v => v * 2.54, hint: "÷ 2.54", sub: "cm → in" },
+  "l-gal": { left: "L", right: "GAL", toR: v => v * 0.264172, toL: v => v / 0.264172, hint: "× 0.264172", sub: "L → gal" },
+};
+let curMetric = "speed";
+function setMetric(mode) {
+  curMetric = mode; const m = modes[mode];
+  document.getElementById("m-left-label").textContent = m.left;
+  document.getElementById("m-right-label").textContent = m.right;
+  document.getElementById("formula-hint").textContent = m.hint;
+  document.getElementById("metric-sub").textContent = m.sub;
+  document.getElementById("m-left").value = ""; document.getElementById("m-right").value = "";
+  document.querySelectorAll(".metric-tab").forEach(t => t.classList.toggle("active", t.dataset.mode === mode));
+}
+function metricLeft() {
+  const v = parseFloat(document.getElementById("m-left").value);
+  document.getElementById("m-right").value = isNaN(v) ? "" : smartRound(modes[curMetric].toR(v));
+}
+function metricRight() {
+  const v = parseFloat(document.getElementById("m-right").value);
+  document.getElementById("m-left").value = isNaN(v) ? "" : smartRound(modes[curMetric].toL(v));
+}
+function smartRound(n) { return Math.abs(n) >= 100 ? n.toFixed(1) : Math.abs(n) >= 1 ? n.toFixed(2) : n.toFixed(4) }
+
+// ===== TRANSLATE =====
+function updateCharCount() {
+  document.getElementById("char-count").textContent = document.getElementById("source-text").value.length + " chars";
+}
+async function translateText() {
+  const text = document.getElementById("source-text").value.trim(); if (!text) return;
+  const btn = document.getElementById("btn-translate"), out = document.getElementById("translated-text");
+  btn.disabled = true; btn.textContent = "Working..."; out.value = "";
+  const result = await doTranslate(text, getTargetLang(), "en");
+  out.value = result || "Translation failed.";
+  btn.disabled = false; btn.textContent = "Translate";
+}
+document.getElementById("source-text").addEventListener("keydown", e => {
+  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) translateText();
+});
+
+// ===== LENS =====
+let lensImageData = null;
+let lensOverlayData = null;
+let showingOverlay = true;
+
+function resizeImage(img, maxDim) {
+  const c = document.createElement("canvas");
+  let w = img.width, h = img.height;
+  if (w > maxDim || h > maxDim) {
+    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+    else { w = Math.round(w * maxDim / h); h = maxDim; }
+  }
+  c.width = w; c.height = h;
+  c.getContext("2d").drawImage(img, 0, 0, w, h);
+  return { canvas: c, width: w, height: h, base64: c.toDataURL("image/jpeg", 0.85) };
+}
+
+async function handleLensCapture(input) {
+  const file = input.files?.[0]; if (!file) return;
+  const status = document.getElementById("lens-status");
+  const capture = document.getElementById("lens-capture");
+  const canvasWrap = document.getElementById("lens-canvas-wrap");
+  const canvas = document.getElementById("lens-canvas");
+  const ctx = canvas.getContext("2d");
+
+  // Show loading immediately
+  capture.style.display = "none";
+  canvasWrap.style.display = "block";
+  status.textContent = "Processing image...";
+  status.style.display = "block";
+  document.getElementById("lens-retake-btn").style.display = "inline-block";
+
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    const img = new Image();
+    img.onload = async function () {
+      // Resize for API (1500px max) and display
+      const resized = resizeImage(img, 1500);
+
+      canvas.width = resized.width;
+      canvas.height = resized.height;
+      ctx.drawImage(resized.canvas, 0, 0);
+      lensImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      status.textContent = "Reading text...";
+
+      try {
+        const ocrResult = await doOcr(resized.base64);
+        if (!ocrResult.lines || ocrResult.lines.length === 0) {
+          status.textContent = "No text detected. Try a clearer photo.";
+          return;
+        }
+
+        status.textContent = "Translating " + ocrResult.lines.length + " lines...";
+
+        // Batch translate all lines
+        const allText = ocrResult.lines.map(l => l.text).join("\n");
+        const translated = await doTranslate(allText, "en", "");
+        const translatedLines = (translated || "").split("\n");
+
+        // Draw overlay
+        ctx.putImageData(lensImageData, 0, 0); // redraw clean resized image
+
+        for (let i = 0; i < ocrResult.lines.length; i++) {
+          const line = ocrResult.lines[i];
+          const trans = translatedLines[i] || line.text;
+          const b = line.bounds;
+          if (!b || b.w === 0) continue;
+
+          const pad = b.h * 0.15;
+
+          // Draw background block over original text
+          ctx.fillStyle = "rgba(250, 247, 243, 0.92)";
+          ctx.fillRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2);
+
+          // Draw thin accent bar on left edge
+          ctx.fillStyle = "#BF522A";
+          ctx.fillRect(b.x - pad, b.y - pad, 3, b.h + pad * 2);
+
+          // Fit translated text into the box
+          const fontSize = Math.max(12, Math.min(b.h * 0.75, 40));
+          ctx.font = "600 " + fontSize + "px 'Libre Franklin', sans-serif";
+          ctx.fillStyle = "#1C1917";
+          ctx.textBaseline = "middle";
+
+          // Truncate if needed
+          let displayText = trans;
+          while (ctx.measureText(displayText).width > b.w + pad && displayText.length > 3) {
+            displayText = displayText.slice(0, -2) + "…";
+          }
+
+          ctx.fillText(displayText, b.x, b.y + b.h / 2);
+        }
+
+        lensOverlayData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        showingOverlay = true;
+        document.getElementById("lens-toggle-wrap").style.display = "block";
+        document.getElementById("lens-toggle").textContent = "Show Original";
+        status.textContent = "";
+
+      } catch (err) {
+        if (err.message.includes("API") || err.message.includes("ocr")) {
+          status.textContent = "OCR requires Google Vision API. Deploy with GOOGLE_API_KEY.";
+        } else {
+          status.textContent = "Error: " + err.message;
+        }
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function toggleOverlay() {
+  const canvas = document.getElementById("lens-canvas");
+  const ctx = canvas.getContext("2d");
+  const btn = document.getElementById("lens-toggle");
+  if (showingOverlay && lensImageData) {
+    ctx.putImageData(lensImageData, 0, 0);
+    btn.textContent = "Show Translation";
+    showingOverlay = false;
+  } else if (lensOverlayData) {
+    ctx.putImageData(lensOverlayData, 0, 0);
+    btn.textContent = "Show Original";
+    showingOverlay = true;
+  }
+}
+
+function resetLens() {
+  document.getElementById("lens-capture").style.display = "flex";
+  document.getElementById("lens-canvas-wrap").style.display = "none";
+  document.getElementById("lens-toggle-wrap").style.display = "none";
+  document.getElementById("lens-retake-btn").style.display = "none";
+  document.getElementById("lens-status").style.display = "none";
+  document.getElementById("lens-input").value = "";
+  lensImageData = null;
+  lensOverlayData = null;
+  showingOverlay = true;
+}
+
+// ===== INIT =====
+(async function () {
+  const code = await detectLocation();
+  if (code) { applyCountry(code) }
+  else { applyCountry("MX"); document.getElementById("loc-detail").textContent += " (default)" }
+})();
+</script>
+</body>
+</html>
