@@ -20,6 +20,9 @@
       --font-mono: 'JetBrains Mono', monospace;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
     body {
       background: var(--bg);
       font-family: var(--font-body);
@@ -143,12 +146,21 @@
     }
     .btn-swap:hover { background: var(--accent); color: var(--card); border-color: var(--accent) }
 
-    /* ---- Metric tabs ---- */
-    .metric-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px }
+    /* ---- Metric ---- */
+    .metric-groups {
+      display: flex; margin-bottom: 20px; align-items: flex-end;
+      flex-wrap: wrap; justify-content: space-between; gap: 8px 0;
+    }
+    .metric-group { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+    .metric-group-label {
+      font-family: var(--font-mono); font-size: 8px; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .metric-group-tabs { display: flex; gap: 3px; }
     .metric-tab {
       font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
       letter-spacing: 0.5px; color: var(--muted); background: none;
-      border: 1px solid var(--rule); border-radius: 0; padding: 6px 11px;
+      border: 1px solid var(--rule); border-radius: 0; padding: 5px 8px;
       cursor: pointer; transition: all 0.15s; white-space: nowrap;
     }
     .metric-tab:hover { color: var(--ink); border-color: var(--ink) }
@@ -170,7 +182,7 @@
     .translate-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px }
     .btn-action {
       font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
-      letter-spacing: 1px; font-weight: 600; background: var(--ink);
+      letter-spacing: 1px; font-weight: 600; background: var(--accent);
       color: var(--card); border: none; border-radius: 0; padding: 9px 20px;
       cursor: pointer; transition: opacity 0.15s;
     }
@@ -181,8 +193,8 @@
     /* ---- Lens ---- */
     .lens-capture {
       position: relative; width: 100%;
-      background: var(--input-bg); border: 1px solid var(--rule);
-      min-height: 180px; display: flex; flex-direction: column;
+      background: var(--input-bg); border: 1.5px dashed var(--rule);
+      min-height: 130px; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 12px;
       cursor: pointer; transition: border-color 0.15s;
     }
@@ -214,6 +226,9 @@
     @media (max-width: 480px) {
       .translate-grid { flex-direction: column }
       .tool-input { font-size: 18px }
+      .tool-grid { flex-direction: column; gap: 10px }
+      .tool-arrow { padding-bottom: 0; transform: rotate(90deg) }
+      .metric-groups { gap: 8px; justify-content: flex-start }
     }
   </style>
 </head>
@@ -254,7 +269,7 @@
 
   <div class="lens-capture" id="lens-capture">
     <div class="lens-icon">📷</div>
-    <div class="lens-hint">Tap to photograph a menu</div>
+    <div class="lens-hint">Tap to photograph a menu, sign, label, etc.</div>
     <input type="file" accept="image/*" capture="environment" id="lens-input" onchange="handleLensCapture(this)">
   </div>
 
@@ -266,6 +281,30 @@
 
   <div class="lens-toggle-wrap" id="lens-toggle-wrap" style="display:none">
     <button class="btn-sm" id="lens-toggle" onclick="toggleOverlay()">Show Original</button>
+  </div>
+</div>
+
+<!-- TRANSLATE -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <div class="card-title">Translate</div>
+      <div class="card-sub" id="translate-sub">English → Spanish</div>
+    </div>
+  </div>
+  <div class="translate-grid">
+    <div class="translate-col">
+      <div class="tool-label"><span class="flag">🇺🇸</span> EN</div>
+      <textarea id="source-text" placeholder="Type English text..." oninput="updateCharCount()"></textarea>
+    </div>
+    <div class="translate-col">
+      <div class="tool-label"><span class="flag" id="trans-flag">🌍</span> <span id="trans-code">ES</span></div>
+      <textarea id="translated-text" class="output" placeholder="Translation appears here..." readonly></textarea>
+    </div>
+  </div>
+  <div class="translate-footer">
+    <span class="char-count" id="char-count">0 chars</span>
+    <button class="btn-action" id="btn-translate" onclick="translateText()">Translate</button>
   </div>
 </div>
 
@@ -298,53 +337,43 @@
   <div class="card-head">
     <div>
       <div class="card-title">Metric</div>
-      <div class="card-sub" id="metric-sub">km/h → mph</div>
+      <div class="card-sub" id="metric-sub">km/h ⇄ mph</div>
     </div>
   </div>
-  <div class="metric-tabs">
-    <button class="metric-tab active" data-mode="speed" onclick="setMetric('speed')">km/h · mph</button>
-    <button class="metric-tab" data-mode="temp" onclick="setMetric('temp')">°C · °F</button>
-    <button class="metric-tab" data-mode="km-mi" onclick="setMetric('km-mi')">km · mi</button>
-    <button class="metric-tab" data-mode="kg-lb" onclick="setMetric('kg-lb')">kg · lb</button>
-    <button class="metric-tab" data-mode="cm-in" onclick="setMetric('cm-in')">cm · in</button>
-    <button class="metric-tab" data-mode="l-gal" onclick="setMetric('l-gal')">L · gal</button>
+  <div class="metric-groups">
+    <div class="metric-group">
+      <div class="metric-group-label">Temp</div>
+      <button class="metric-tab" data-mode="temp" onclick="setMetric('temp')">°C · °F</button>
+    </div>
+    <div class="metric-group">
+      <div class="metric-group-label">Distance</div>
+      <div class="metric-group-tabs">
+        <button class="metric-tab active" data-mode="speed" onclick="setMetric('speed')">km/h · mph</button>
+        <button class="metric-tab" data-mode="km-mi" onclick="setMetric('km-mi')">km · mi</button>
+        <button class="metric-tab" data-mode="cm-in" onclick="setMetric('cm-in')">cm · in</button>
+      </div>
+    </div>
+    <div class="metric-group">
+      <div class="metric-group-label">Weight</div>
+      <button class="metric-tab" data-mode="kg-lb" onclick="setMetric('kg-lb')">kg · lb</button>
+    </div>
+    <div class="metric-group">
+      <div class="metric-group-label">Volume</div>
+      <button class="metric-tab" data-mode="l-gal" onclick="setMetric('l-gal')">L · gal</button>
+    </div>
   </div>
   <div class="tool-grid">
     <div class="tool-col">
       <div class="tool-label" id="m-left-label">KM/H</div>
       <input type="number" inputmode="decimal" class="tool-input" id="m-left" placeholder="0" oninput="metricLeft()">
     </div>
-    <div class="tool-arrow">→</div>
+    <div class="tool-arrow">⇄</div>
     <div class="tool-col">
       <div class="tool-label" id="m-right-label">MPH</div>
       <input type="number" inputmode="decimal" class="tool-input" id="m-right" placeholder="0" oninput="metricRight()">
     </div>
   </div>
   <div class="formula-line" id="formula-hint">× 0.621371</div>
-</div>
-
-<!-- TRANSLATE -->
-<div class="card">
-  <div class="card-head">
-    <div>
-      <div class="card-title">Translate</div>
-      <div class="card-sub" id="translate-sub">English → Spanish</div>
-    </div>
-  </div>
-  <div class="translate-grid">
-    <div class="translate-col">
-      <div class="tool-label"><span class="flag">🇺🇸</span> EN</div>
-      <textarea id="source-text" placeholder="Type English text..." oninput="updateCharCount()"></textarea>
-    </div>
-    <div class="translate-col">
-      <div class="tool-label"><span class="flag" id="trans-flag">🌍</span> <span id="trans-code">ES</span></div>
-      <textarea id="translated-text" class="output" placeholder="Translation appears here..." readonly></textarea>
-    </div>
-  </div>
-  <div class="translate-footer">
-    <span class="char-count" id="char-count">0 chars</span>
-    <button class="btn-action" id="btn-translate" onclick="translateText()">Translate</button>
-  </div>
 </div>
 
 <script>
@@ -562,12 +591,12 @@ function swapCurrency() {
 
 // ===== METRIC =====
 const modes = {
-  speed: { left: "KM/H", right: "MPH", toR: v => v * 0.621371, toL: v => v / 0.621371, hint: "× 0.621371", sub: "km/h → mph" },
-  temp: { left: "°C", right: "°F", toR: v => v * 9 / 5 + 32, toL: v => (v - 32) * 5 / 9, hint: "(°C × 9/5) + 32", sub: "°C → °F" },
-  "km-mi": { left: "KM", right: "MI", toR: v => v * 0.621371, toL: v => v / 0.621371, hint: "× 0.621371", sub: "km → mi" },
-  "kg-lb": { left: "KG", right: "LB", toR: v => v * 2.20462, toL: v => v / 2.20462, hint: "× 2.20462", sub: "kg → lb" },
-  "cm-in": { left: "CM", right: "IN", toR: v => v / 2.54, toL: v => v * 2.54, hint: "÷ 2.54", sub: "cm → in" },
-  "l-gal": { left: "L", right: "GAL", toR: v => v * 0.264172, toL: v => v / 0.264172, hint: "× 0.264172", sub: "L → gal" },
+  speed: { left: "KM/H", right: "MPH", toR: v => v * 0.621371, toL: v => v / 0.621371, hint: "× 0.621371", sub: "km/h ⇄ mph" },
+  temp: { left: "°C", right: "°F", toR: v => v * 9 / 5 + 32, toL: v => (v - 32) * 5 / 9, hint: "(°C × 9/5) + 32", sub: "°C ⇄ °F" },
+  "km-mi": { left: "KM", right: "MI", toR: v => v * 0.621371, toL: v => v / 0.621371, hint: "× 0.621371", sub: "km ⇄ mi" },
+  "kg-lb": { left: "KG", right: "LB", toR: v => v * 2.20462, toL: v => v / 2.20462, hint: "× 2.20462", sub: "kg ⇄ lb" },
+  "cm-in": { left: "CM", right: "IN", toR: v => v / 2.54, toL: v => v * 2.54, hint: "÷ 2.54", sub: "cm ⇄ in" },
+  "l-gal": { left: "L", right: "GAL", toR: v => v * 0.264172, toL: v => v / 0.264172, hint: "× 0.264172", sub: "L ⇄ gal" },
 };
 let curMetric = "speed";
 function setMetric(mode) {
