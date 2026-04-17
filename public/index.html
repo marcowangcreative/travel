@@ -15,10 +15,23 @@
       --accent: #BF522A;
       --accent-light: #F3E0D6;
       --input-bg: #F5F1EC;
+      --overlay-bg: rgba(250, 247, 243, 0.92);
       --font-display: 'Instrument Serif', Georgia, serif;
       --font-body: 'Libre Franklin', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
     }
+    [data-theme="dark"] {
+      --bg: #1C1917;
+      --card: #262220;
+      --ink: #F1EBE3;
+      --muted: #8C8578;
+      --rule: #3A332E;
+      --accent: #D97757;
+      --accent-light: #3D2519;
+      --input-bg: #201C1A;
+      --overlay-bg: rgba(38, 34, 32, 0.92);
+    }
+    body { transition: background-color 0.2s, color 0.2s }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     input[type="number"]::-webkit-outer-spin-button,
     input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -50,6 +63,13 @@
       cursor: pointer; transition: all 0.15s;
     }
     .loc-change:hover { background: var(--accent); color: #fff }
+    .loc-theme {
+      background: none; border: 1px solid var(--rule); border-radius: 0;
+      width: 32px; height: 32px; padding: 0; cursor: pointer; color: var(--ink);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: all 0.15s;
+    }
+    .loc-theme:hover { border-color: var(--ink) }
 
     /* ---- Override modal ---- */
     .override-overlay {
@@ -242,6 +262,7 @@
     <div class="loc-detail" id="loc-detail">auto-configuring</div>
   </div>
   <button class="loc-change" onclick="openOverride()">Change</button>
+  <button class="loc-theme" id="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">☾</button>
 </div>
 
 <!-- OVERRIDE -->
@@ -705,18 +726,23 @@ async function handleLensCapture(input) {
 
           const pad = b.h * 0.15;
 
+          const styles = getComputedStyle(document.documentElement);
+          const overlayBg = styles.getPropertyValue("--overlay-bg").trim() || "rgba(250,247,243,0.92)";
+          const overlayAccent = styles.getPropertyValue("--accent").trim() || "#BF522A";
+          const overlayInk = styles.getPropertyValue("--ink").trim() || "#1C1917";
+
           // Draw background block over original text
-          ctx.fillStyle = "rgba(250, 247, 243, 0.92)";
+          ctx.fillStyle = overlayBg;
           ctx.fillRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2);
 
           // Draw thin accent bar on left edge
-          ctx.fillStyle = "#BF522A";
+          ctx.fillStyle = overlayAccent;
           ctx.fillRect(b.x - pad, b.y - pad, 3, b.h + pad * 2);
 
           // Fit translated text into the box
           const fontSize = Math.max(12, Math.min(b.h * 0.75, 40));
           ctx.font = "600 " + fontSize + "px 'Libre Franklin', sans-serif";
-          ctx.fillStyle = "#1C1917";
+          ctx.fillStyle = overlayInk;
           ctx.textBaseline = "middle";
 
           // Truncate if needed
@@ -773,6 +799,24 @@ function resetLens() {
   lensOverlayData = null;
   showingOverlay = true;
 }
+
+// ===== THEME =====
+function applyTheme(theme) {
+  if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  else document.documentElement.removeAttribute("data-theme");
+  const btn = document.getElementById("theme-toggle");
+  if (btn) btn.textContent = theme === "dark" ? "☀" : "☾";
+}
+function toggleTheme() {
+  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  localStorage.setItem("theme", next);
+  applyTheme(next);
+}
+(function initTheme() {
+  const saved = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dark" : "light"));
+})();
 
 // ===== INIT =====
 (async function () {
